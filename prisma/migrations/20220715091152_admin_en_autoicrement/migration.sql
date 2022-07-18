@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `admin` MODIFY `idAdmin` INTEGER NOT NULL AUTO_INCREMENT;
