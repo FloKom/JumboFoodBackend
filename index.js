@@ -47,6 +47,13 @@ app.get('/producteur', async function(req, res){
   res.status(200).json(await newProducteur.producteurs)
 });
 
+
+app.delete('/producteur/:id', async function(req, res){
+  let id = parseInt(req.params.id)
+  res.status(200).json({producteur:await newProducteur.deleteFournisseur(id), message:"producteur supprimer avec succes"})
+});
+
+
 app.post('/producteur/:id/proposer',multer, async (req, res)=>{
   const photoURL = req.protocol + '://' + req.headers.host + '/' + 'images' + '/' + req.file.filename
   const proposerProduit = await newProducteur.proposerProduit(parseInt(req.params.id), req.body, photoURL )

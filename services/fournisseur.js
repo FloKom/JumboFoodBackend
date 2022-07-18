@@ -1,4 +1,4 @@
-const EXPRESS_PRISMA = require('../middlewares/prismaClient');
+const EXPRESS_PRISMA = require('../middlewares/prismaClient')
 const prisma = EXPRESS_PRISMA.prisma;
 
 
@@ -17,6 +17,15 @@ module.exports.enregistrerFournisseur = function(body) {
         }
     })
     
+}
+
+
+module.exports.deleteFournisseur = (id)=>{
+    return prisma.producteur.delete({
+        where:{
+            id
+        }
+    })
 }
 
 
@@ -90,6 +99,8 @@ module.exports.produitsFournisseur = async function(id) {
     console.log(produits)
     return produits           
 }
+
+
 
 
 
