@@ -1,0 +1,19 @@
+<html>
+     <head>
+         <title>Test upload</title>
+     </head>
+     <body>
+         <form name="form" action="http://localhost:3000/produit" method="post"  enctype="multipart/form-data">
+             <input type="file" name="image" />
+             <label for="nom">nom</label>
+             <input type="text" name="nom" id="nom">
+             <label for="description">description</label>
+             <input type="text" name="description" id="description">
+             <label for="prix">prix</label>
+             <input type="number" name="prix" id="prix">
+             <label for="conditionnement">conditionnement</label>
+             <input type="text" name="conditionnement" id="conditionnement">
+             <input type="submit" value="invia" />
+         </form>
+     </body>
+ </html>
