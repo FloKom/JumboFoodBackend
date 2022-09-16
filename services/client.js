@@ -9,7 +9,7 @@ router.post('/',async (req, res)=>{
             ...req.body
         }
     })
-    res.status(200).json({result:client, message:"client enregistrer avec succes"})
+    res.status(200).json(client)
 })
 
 router.get('/', async (req, res)=>{
@@ -56,7 +56,10 @@ router.get('/:id/panniers', async (req,res)=>{
     const clientId = parseInt(req.params.id)
     const panniers = await prisma.pannier.findMany({
         where:{
-            clientId
+            clientId,
+            statut:{
+                not:"livre"
+            }
         },
         include:{
             ligneproduit:true,

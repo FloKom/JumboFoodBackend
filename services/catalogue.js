@@ -3,11 +3,13 @@ const prisma = EXPRESS_PRISMA.prisma;
 
 
 
-module.exports.CatalogueDesProduits = prisma.catalogue.findMany()
+module.exports.CatalogueDesProduits = async function(){
+    return prisma.catalogue.findMany()
+}
                             
                           
 module.exports.supprimerCatalogue = function(id){
-
+    
     async function supCatalogue(){
         await prisma.catalogue.delete({
             where: {

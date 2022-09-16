@@ -1,14 +1,34 @@
+const { query } = require('express');
 const EXPRESS_PRISMA = require('../middlewares/prismaClient')
 const prisma = EXPRESS_PRISMA.prisma;
 
 
+module.exports.producteurs = async function(body){
+    console.log('====================================');
+    console.log(body);
+    console.log('====================================');
+    return prisma.producteur.findMany({
+        include:{
+            producteur_has_produit:true,
+            produitpropose:true,
+            plantation:true
+            
+        },
+        where:{
+            nomStructure:{
+                contains:body.q
+            },
+           preinscriptionValide:{
+            contains:body.opt
+           },
+          
+            
+        },
 
-module.exports.producteurs = prisma.producteur.findMany({
-    include:{
-        producteur_has_produit:true
-    }
-})
-                           
+        
+    })
+}
+                  
 module.exports.enregistrerFournisseur = function(body) {
     
     return prisma.producteur.create({
@@ -24,7 +44,7 @@ module.exports.deleteFournisseur = (id)=>{
     return prisma.producteur.delete({
         where:{
             id
-        }
+        }, 
     })
 }
 
@@ -44,40 +64,57 @@ module.exports.modifierFournisseur = async function(id, body) {
 
 
 module.exports.proposerProduit = async (producteurId, body, photoURL)=>{
-    body.produitId = parseInt(body.produitId)
-    // body.frequenceProduction = parseInt(body.frequenceProduction)
-    return prisma.producteur_has_produit.create({
-        data:{
-            producteurId,
-            photoURL,
-            ...body
+    return new Promise(async(resolve, reject) => {
+        let {plantation, produits, ...attr} = body
+        produits = JSON.parse(produits)
+        let results = []
+        for(let produit of produits){
+            produit = await prisma.produitpropose.create({
+                data:{
+                    photo:{
+                        create:photoURL
+                    },
+                    ...produit,
+                    producteurId
+                }
+            })
+            results.push(produit)
         }
-    })
+        if(body.plantation != undefined){
+            plantation = JSON.parse(plantation)
+            plantation = plantation.map((plant)=>{
+                plant.producteurId = producteurId
+                return plant
+        })  
+            await prisma.producteur.update({
+                where:{
+                    id:producteurId
+                },
+                data:{
+                    description:body.description
+                }
+
+            })
+            for(let plant of plantation){
+                await prisma.plantation.createMany({
+                    data:plantation
+                })
+            }
+        }   
+        resolve(results)
+    });
+    
 }
 
 module.exports.produitsProposer = async (producteurId)=>{
-    const ps = await prisma.producteur_has_produit.findMany({
+    return prisma.produitpropose.findMany({
         where:{
             producteurId
+        },
+        include:{
+            photo:true 
         }
     })
-    console.log(ps)
-    let produits = []
-    for(let p of ps){
-        let produit = await prisma.produit.findUnique({
-            where:{
-                id:p.produitId
-            },
-            include:{
-                producteur_has_produit:true,
-                categorieproduit:true,
-                catalogue:true
-            }
-            
-        })
-        produits.push(produit)
-    }
-    return produits
 }
 
 module.exports.produitsFournisseur = async function(id) {
@@ -111,7 +148,9 @@ module.exports.oneFournisseur = function(id) {
             id
         },
         include:{
-            producteur_has_produit:true
+            producteur_has_produit:true,
+            produitpropose:true,
+            plantation:true
         }
     })
     

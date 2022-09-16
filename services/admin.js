@@ -18,11 +18,17 @@ module.exports.connect = async (body)=>{
             email:body.email
         }
     })
-    return bcrypt.compare(body.motPasse, ad.motPasse)
+    if(ad != null){
+        return bcrypt.compare(body.motPasse, ad.motPasse)
+    }
+    return false
+    
     
 }
 
-module.exports.admins = prisma.admin.findMany()
+module.exports.admins = async function () {
+    return prisma.admin.findMany()
+}
    
 
 module.exports.modifierAdmin = (id,body) => {

@@ -5,13 +5,53 @@ const router = exp.Router()
 const prisma = new PrismaClient()
 
 router.get('/', async (req, res)=>{
-    const produits = await prisma.produit.findMany({
-        include:{
-            producteur_has_produit:true,
-            categorieproduit:true,
-            catalogue:true
+    let produits = null
+    let data = null
+    if(req.query.nom != null){
+        produits = await prisma.produit.findMany({
+            where:{
+                nom:{
+                    contains: req.query.nom
+                }
+            }
+        })
+        data = [...produits]
+        for(let produit of produits){
+            let ligneProduits = await prisma.ligneproduit.findMany({
+                where:{
+                    produitId:produit.id,
+                    pannierId:null
+                }
+            })
+            if(ligneProduits.length != 0){
+                for(let ligneproduit of ligneProduits){
+                    let pack = await prisma.packproduit.findFirst({
+                        where:{
+                            id:ligneproduit.packproduitId,
+                        },
+                        include:{
+                            ligneproduit:true
+                        }
+                    })
+                    
+                    let found = data.find((item)=>(item.id == pack.id)&&(item.ligneproduit != null))
+                    if(found == undefined){
+                        data.push(pack)
+                    }
+                }
+            }
+            
         }
-    })
+        produits = [...data]
+        
+    }else{
+        produits = await prisma.produit.findMany({
+            include:{
+                producteur_has_produit:true,
+                catalogue:true
+            }
+        })
+    }
     res.status(200).json(produits)
 })
 
@@ -23,7 +63,6 @@ router.get('/:id', async (req,res)=>{
         },
         include:{
             producteur_has_produit:true,
-            categorieproduit:true,
             catalogue:true
         }
     })
@@ -42,7 +81,7 @@ router.put('/:id/catalogue', async (req,res)=>{
             ...req.body
         }
     })
-    res.status(200).json({result:catalogue, message:"catalogue mis a jour avec succes"})
+    res.status(200).json(catalogue)
 })
 
 
@@ -59,16 +98,18 @@ router.get('/:id/catalogue', async (req,res)=>{
 
 
 router.post('/', async (req,res)=>{
-    let {nom, prix, description} = req.body
-    prix = parseInt(prix)
+    req.body.prix = parseInt(req.body.prix)
+    req.body.categorieproduitId = parseInt(req.body.categorieproduitId)
     const photoURL = req.protocol + '://' + req.headers.host + '/' + 'images' + '/' + req.file.filename  
-    
+    let {categorieproduitId, ...body} = req.body
+    if(isNaN(parseInt(categorieproduitId))){
+        categorieproduitId = null
+    }
     const produit = await prisma.produit.create({
         data:{
-            nom,
-            prix,
-            photoURL,
-            description
+            ...body,
+            categorieproduitId,
+            photoURL
         },
     })
 
@@ -84,14 +125,19 @@ router.post('/', async (req,res)=>{
     })
     
 
-    res.status(200).json({result:catalogue, message:"produit cree avec succes"})
+    res.status(200).json(catalogue)
 })
 
 router.post('/:id', async (req, res)=>{
     let produitUdapted
+    if(req.body.categorieproduitId!=undefined){
+        req.body.categorieproduitId = parseInt(req.body.categorieproduitId)
+    }
     if(req.body.prix != undefined){
         req.body.prix = parseInt(req.body.prix)
     }
+    let {catalogue,producteur_has_produit, ...attr}=req.body
+    console.log( attr);
     if(req.file != null){
        const photoURL = req.protocol + '://' + req.headers.host + '/' + 'images' + '/' + req.file.filename
        produitUdapted = await prisma.produit.update({
@@ -99,7 +145,7 @@ router.post('/:id', async (req, res)=>{
                 id: parseInt(req.params.id)
             },
             data:{
-                ...req.body,
+                ...attr,
                 photoURL
             }
         })
@@ -110,13 +156,18 @@ router.post('/:id', async (req, res)=>{
                 id: parseInt(req.params.id)
             },
             data:{
-                ...req.body
+                ...attr
             }
         }).catch(()=>{
             res.send("echec de mise a jour")
         })
     }
-    res.status(200).json({result:produitUdapted, message:"produit modifie avec succes"})
+    
+    console.log(req.body);
+    console.log('====================================');
+    console.log(produitUdapted);
+    console.log('====================================');
+    res.status(200).json(produitUdapted)
 })
 
 router.delete('/:id', async (req, res)=>{
@@ -133,7 +184,7 @@ router.delete('/:id', async (req, res)=>{
         }
     })
 
-res.status(200).json({result:deletedProduct, message:"produit supprimer avec succes"})
+res.status(200).json(deletedProduct)
 })
 
 router.get('/:id/producteurs', async (req,res)=>{

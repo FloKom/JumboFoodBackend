@@ -4,11 +4,26 @@ const router = exp.Router()
 const prisma = new PrismaClient()
 
 router.get('/', async (req, res)=>{
-    const packProduits = await prisma.packproduit.findMany({
-        include:{
-            ligneproduit:true
-        }
-    })
+    let packProduits = null
+    if(req.query.nom != null){
+        packProduits = await prisma.packproduit.findMany({
+            include:{
+                ligneproduit:true
+            },
+            where:{
+                nom:{
+                    contains: req.query.nom
+                }
+            }
+        })        
+    }else{
+        packProduits = await prisma.packproduit.findMany({
+            include:{
+                ligneproduit:true
+            }
+        })
+    }
+    
     res.status(200).json(packProduits)
 })
 
@@ -36,7 +51,8 @@ router.post('/', async (req,res)=>{
     res.status(200).json({result:packProduit, message:"pack produit cree avec succes"})
 })
 
-router.post('/:id', async (req, res)=>{
+router.put('/:id', async (req, res)=>{
+    console.log(req.body)
     let packProduitUdapted
     if(req.body.prix != undefined){
         req.body.prix = parseInt(req.body.prix)
@@ -48,6 +64,10 @@ router.post('/:id', async (req, res)=>{
             packproduitId:parseInt(req.params.id),
             pannierId:null
         }
+    })
+    ligneProduits = ligneProduits.map((ligne)=>{
+        let {packproduitId, ...lignes} = ligne
+        return lignes
     })
     if(req.file != null){
        const photoURL = req.protocol + '://' + req.headers.host + '/' + 'images' + '/' + req.file.filename
@@ -67,8 +87,6 @@ router.post('/:id', async (req, res)=>{
                 _count:true
             }
 
-        }).catch(()=>{
-            res.send("echec de mise a jour")
         })
     }
     else{
@@ -87,10 +105,10 @@ router.post('/:id', async (req, res)=>{
             }
 
         }).catch(()=>{
-            res.send("echec de mise a jour")
+            res.send("echec de mise a jour 2")
         })
     }
-    res.status(200).json({result:packProduitUdapted, message:"pack produit modifie avec succes"})
+    res.status(200).json(packProduitUdapted)
 })
 
 router.delete('/:id', async (req, res)=>{
@@ -104,7 +122,7 @@ router.delete('/:id', async (req, res)=>{
 
         const deletePackProduit = await prisma.packproduit.delete({
             where:{
-                id:parseInt(req.params.id)
+                id:parseInt(req.params.id)                
             }
         })
         res.status(200).json(deletePackProduit)
@@ -118,6 +136,7 @@ router.delete('/:id', async (req, res)=>{
 
 router.get('/:id', async (req,res)=>{
     try{
+        
         let id = parseInt(req.params.id)
         let packProduit = await prisma.packproduit.findUnique({
         where:{

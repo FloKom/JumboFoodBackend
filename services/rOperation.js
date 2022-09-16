@@ -7,7 +7,9 @@ const bcrypt = require('bcrypt')
 // Consulter la liste des responsables de opérations
 ///////////////////////////////////////////////////////////
 
-module.exports.ROperations = prisma.ropert.findMany()
+module.exports.ROperations = async function(){
+    return prisma.ropert.findMany()
+}
                                
 
 //////////////////////////////////////////
@@ -28,7 +30,11 @@ module.exports.connect = async (body)=>{
             email:body.email
         }
     })
-    return bcrypt.compare(body.motPasse, ad.motPasse)
+    if(ad != null){
+        return bcrypt.compare(body.motPasse, ad.motPasse)
+    }
+    return false
+    
 }
 
 

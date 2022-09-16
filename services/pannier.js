@@ -2,13 +2,39 @@ const { PrismaClient } = require('@prisma/client');
 const exp = require('express');
 const router = exp.Router()
 const prisma = new PrismaClient()
+const CodeGenerator = require('node-code-generator')
+const generator = new CodeGenerator();
+const pattern = '#####';
+const howMany = 1;
+const payment = require('./payment')
 
 router.post('/', async (req, res)=>{
+    let codes = await prisma.pannier.findMany({
+        select:{
+            id:true
+        }
+    })
+    codes = codes.map((item)=>item.id)
+    const code = generator.generateCodes(
+        pattern, 
+        howMany, 
+        {
+            existingCodesLoader:()=>{
+                return codes
+            },
+            numericChars:'123456789'
+        }
+    );
     req.body.prix = parseInt(req.body.prix)
     req.body.clientId = parseInt(req.body.clientId)
-    req.body.pointramassageId = parseInt(req.body.pointramassageId)
-    
-    let {ligneProduits, lignePacks, ...body} = req.body
+    if(req.body.pointramassageId != null){
+        req.body.pointramassageId = parseInt(req.body.pointramassageId)
+    }
+    if(req.body.longitude != null){
+        req.body.longitude = parseFloat(req.body.longitude)
+        req.body.latitude = parseFloat(req.body.latitude)
+    }
+    let {ligneProduits, lignePacks, pay_token, ...body} = req.body
     let lignePannierProduits = []
 
     if(ligneProduits != null){
@@ -76,8 +102,9 @@ router.post('/', async (req, res)=>{
 
     let result = await prisma.pannier.create({
         data:{
+            statut:"non paye",
             ...body,
-            date: new Date(),
+            id:parseInt(code[0]),
             ligneproduit:{
                 create: lignePannierProduits
             }
@@ -86,16 +113,48 @@ router.post('/', async (req, res)=>{
             ligneproduit:true
         }
     })
-
-    res.status(200).json({result,message:"pannier enregistrer"})
+    console.log(result)
+    // const {token} = await payment.getToken()
+    // if(body.moyenPaiement == 'Mobile Money'){
+    //     const timer = setInterval(async ()=>{
+    //         let status = await payment.getPaymentStatus(token, pay_token)
+    //         console.log(status)
+            // if(status === "Failed"){
+                // clearTimeout(timeOut)
+                // clearInterval(timer)
+            // }
+            // if(status === "Success"){
+            //     console.log('id', result.id)
+            //     let res = await prisma.pannier.update({
+            //         where:{
+            //             id:result.id
+            //         },
+            //         data:{
+            //             statut:"non livre"
+            //         }
+            //     })
+            //     clearTimeout(timeOut)
+            //     clearInterval(timer)
+            // }
+        // },1500)
+    
+        // let timeOut = setTimeout(()=>clearInterval(timer), 20000)
+    // }
+    res.status(200).json(result)
 })
 
 router.get('/', async (req,res)=>{
+    console.log('====================================');
+    console.log(req.query);
+    console.log('====================================');
     const panniers = await prisma.pannier.findMany({
         include:{
             ligneproduit:true,
             client:true
+        },where:{
+            statut:req.query.statut
         }
+    
     })
     res.status(200).json(panniers)
 })
@@ -109,14 +168,16 @@ router.get('/:id', async (req,res)=>{
         include:{
             ligneproduit:true,
             client:true
-        }
+        },
+    
     })
     res.status(200).json(pannier)
 })
 
 
-router.put('/:id', async (req,res)=>{
-    const updatedState = prisma.pannier.update({
+router.post('/:id', async (req,res)=>{
+    console.log(req.body)
+    const updatedState = await prisma.pannier.update({
         where:{
             id:parseInt(req.params.id)
         },
@@ -128,7 +189,7 @@ router.put('/:id', async (req,res)=>{
             client:true
         }
     })
-    res.status(200).json({result:updatedState, message:"etat du pannier mis a jour avec succes"})
+    res.status(200).json(updatedState)
 })
 
 module.exports = router
